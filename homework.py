@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 from logging.handlers import RotatingFileHandler
 
@@ -10,7 +11,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
-RETRY_TIME = 600
+RETRY_TIME = 5
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 
 HOMEWORK_STATUSES = {
@@ -37,14 +38,35 @@ class UndocumentedStatusError(Exception):
 
 logging.basicConfig(
     level=logging.DEBUG,
-    filename='my_logger.log',
+    filename='program.log',
     filemode='w',
-    format='%(asctime)s, %(levelname)s, %(name)s, %(message)s'
+    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
 )
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = RotatingFileHandler(
+    'my_logger.log',
+    maxBytes=50000000,
+    backupCount=5)
+logger.addHandler(handler)
+stdout_ = logging.StreamHandler(sys.stdout)
+rootlogger = logging.getLogger()
+rootlogger.addHandler(stdout_)
+
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+handler.setFormatter(formatter)
+
+
 def send_message(bot, message):
-    bot.send_message(CHAT_ID, message)
+    try:
+        bot.send_message(CHAT_ID, message)
+        logging.info(f'Отправка сообщения в Telegram выполнена: {message}')
+    except Exception as err:
+        logging.error(f'Отправка сообщения в Telegram не выполнена: {err}')
 
 
 def get_api_answer(url, current_timestamp):
@@ -52,7 +74,10 @@ def get_api_answer(url, current_timestamp):
     payload = {'from_date': current_timestamp}
     response = requests.get(url, headers=headers, params=payload)
     if response.status_code != 200:
-        raise TheAnswerIsNot200Error('<ответ сервера не равен 200>')
+        logging.error(
+            f'Сбой в работе программы: Эндпоинт {ENDPOINT} недоступен. '
+            f'Код ответа API: {response.status_code}')
+        raise TheAnswerIsNot200Error(f'Код ответа API: {response.status_code}')
     return response.json()
 
 
@@ -64,40 +89,77 @@ def parse_status(homework):
 
 
 def check_response(response):
-    """Изменился ли статус"""
-    if response.get('homeworks') == []:
-        raise EmptyDictionaryOrListError('<пустой словарь>')
-    if response.get('homeworks')[0].get('status') not in HOMEWORK_STATUSES:
-        raise UndocumentedStatusError('<недокументированный статус>')
-    return parse_status(response.get('homeworks')[0])
+    """Проверяем изменился ли статус"""
+    homeworks = response.get('homeworks')[0]
+    status = homeworks.get('status')
+    if status == []:
+        logging.error(
+            f'Ошибка пустое значение: {homeworks}')
+        raise EmptyDictionaryOrListError(
+            f'Ошибка пустое значение: {homeworks}')
+    if status not in HOMEWORK_STATUSES:
+        logging.error(
+            f'Ошибка недокументированный статус: {status}')
+        raise UndocumentedStatusError(
+            f'Ошибка недокументированный статус: {status}')
+    return parse_status(homeworks)
+
+
+def check_tokens():
+    if PRACTICUM_TOKEN is None:
+        logging.critical(
+            'Отсутствует обязательная переменная окружения:'
+            ' "PRACTICUM_TOKEN" Программа принудительно остановлена.')
+        exit()
+    if TELEGRAM_TOKEN is None:
+        logging.critical(
+            'Отсутствует обязательная переменная окружения:'
+            ' "TELEGRAM_TOKEN" Программа принудительно остановлена.')
+        exit()
+    if CHAT_ID is None:
+        logging.critical(
+            'Отсутствует обязательная переменная окружения:'
+            ' "CHAT_ID" Программа принудительно остановлена.')
+        exit()
+
+
+def get_current_timestamp():
+    # return int(time.time())
+    return '0'
 
 
 def main():
+    check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
+    get_current_timestamp()
+    count_errors = 0
     status_tmp = 'reviewing'
-    response = get_api_answer(ENDPOINT, current_timestamp)
     while True:
         try:
+            response = get_api_answer(ENDPOINT, get_current_timestamp())
             if response.get('homeworks') == []:
-                current_timestamp = int(time.time())
                 time.sleep(RETRY_TIME)
                 continue
-            response = get_api_answer(ENDPOINT, current_timestamp)
             status = response.get('homeworks')[0].get('status')
             if status != status_tmp:
                 status_tmp = status
                 message = check_response(response)
                 send_message(bot, message)
-                message = HOMEWORK_STATUSES.get(status_tmp)
-                send_message(bot, message)
+            get_current_timestamp()
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
+            if count_errors < 1:
+                count_errors += 1
+                logging.StreamHandler(sys.stdout)
+                logging.critical(message)
+                send_message(bot, message)
+                continue
+            logging.StreamHandler(sys.stdout)
+            logging.critical(message)
             time.sleep(RETRY_TIME)
             continue
-        current_timestamp = int(time.time())
+        get_current_timestamp()
 
 
 if __name__ == '__main__':

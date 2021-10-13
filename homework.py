@@ -20,17 +20,17 @@ HOMEWORK_STATUSES = {
 }
 
 
-class Not200Error(Exception):
+class TheAnswerIsNot200Error(Exception):
     """Ответ сервера не равен 200."""
     pass
 
 
-class IsEmptyError(Exception):
-    """Пустой список."""
+class EmptyDictionaryOrListError(Exception):
+    """Пустой словарь или список."""
     pass
 
 
-class NotDocError(Exception):
+class UndocumentedStatusError(Exception):
     """Недокументированный статус."""
     pass
 
@@ -52,7 +52,7 @@ def get_api_answer(url, current_timestamp):
     payload = {'from_date': current_timestamp}
     response = requests.get(url, headers=headers, params=payload)
     if response.status_code != 200:
-        raise Not200Error('<ответ сервера не равен 200>')
+        raise TheAnswerIsNot200Error('<ответ сервера не равен 200>')
     return response.json()
 
 
@@ -66,9 +66,9 @@ def parse_status(homework):
 def check_response(response):
     """Изменился ли статус"""
     if response.get('homeworks') == []:
-        raise IsEmptyError('<пустой словарь>')
+        raise EmptyDictionaryOrListError('<пустой словарь>')
     if response.get('homeworks')[0].get('status') not in HOMEWORK_STATUSES:
-        raise NotDocError('<недокументированный статус>')
+        raise UndocumentedStatusError('<недокументированный статус>')
     return parse_status(response.get('homeworks')[0])
 
 

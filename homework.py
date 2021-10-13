@@ -11,7 +11,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
-RETRY_TIME = 5
+RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 
 HOMEWORK_STATUSES = {
@@ -123,20 +123,14 @@ def check_tokens():
         exit()
 
 
-def get_current_timestamp():
-    # return int(time.time())
-    return '0'
-
-
 def main():
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    get_current_timestamp()
     count_errors = 0
     status_tmp = 'reviewing'
     while True:
         try:
-            response = get_api_answer(ENDPOINT, get_current_timestamp())
+            response = get_api_answer(ENDPOINT, int(time.time()))
             if response.get('homeworks') == []:
                 time.sleep(RETRY_TIME)
                 continue
@@ -145,7 +139,6 @@ def main():
                 status_tmp = status
                 message = check_response(response)
                 send_message(bot, message)
-            get_current_timestamp()
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
@@ -159,7 +152,6 @@ def main():
             logging.critical(message)
             time.sleep(RETRY_TIME)
             continue
-        get_current_timestamp()
 
 
 if __name__ == '__main__':

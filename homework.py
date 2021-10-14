@@ -64,7 +64,7 @@ class RequestExceptionError(Exception):
 def send_message(bot, message):
     """Отправка сообщения в Телеграм."""
     try:
-        # bot.send_message(CHAT_ID, message)
+        bot.send_message(CHAT_ID, message)
         logging.StreamHandler(sys.stdout)
         logging.info(
             f'Сообщение в Telegram отправлено: {message}')

@@ -11,7 +11,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
-RETRY_TIME = 600
+RETRY_TIME = 60 * 10
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 
 HOMEWORK_STATUSES = {
@@ -19,6 +19,29 @@ HOMEWORK_STATUSES = {
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена, в ней нашлись ошибки.'
 }
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='program.log',
+    filemode='w',
+    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = RotatingFileHandler(
+    'program.log',
+    maxBytes=50000000,
+    backupCount=5)
+logger.addHandler(handler)
+stdout_ = logging.StreamHandler(sys.stdout)
+rootlogger = logging.getLogger()
+rootlogger.addHandler(stdout_)
+
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+handler.setFormatter(formatter)
 
 
 class TheAnswerIsNot200Error(Exception):
@@ -37,31 +60,6 @@ class UndocumentedStatusError(Exception):
     """Недокументированный статус."""
 
     pass
-
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    filename='program.log',
-    filemode='w',
-    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
-)
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = RotatingFileHandler(
-    'my_logger.log',
-    maxBytes=50000000,
-    backupCount=5)
-logger.addHandler(handler)
-stdout_ = logging.StreamHandler(sys.stdout)
-rootlogger = logging.getLogger()
-rootlogger.addHandler(stdout_)
-
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-handler.setFormatter(formatter)
 
 
 def send_message(bot, message):
@@ -112,6 +110,7 @@ def check_response(response):
 
 def check_tokens():
     """Проверка наличия токенов."""
+    cheker
     if PRACTICUM_TOKEN is None:
         logging.critical(
             'Отсутствует обязательная переменная окружения:'
@@ -133,12 +132,26 @@ def main():
     """Главная функция запуска бота."""
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    count_errors = 0
+    current_timestamp = int(time.time()) - (60 * 60 * 2)
+    errors = True
     status_tmp = 'reviewing'
     while True:
         try:
-            response = get_api_answer(ENDPOINT, int(time.time()))
+            response = get_api_answer(ENDPOINT, current_timestamp)
             if response.get('homeworks') == []:
+                print(
+                    'Статус API:',
+                    response.get('homeworks'),
+                    'response',
+                    response,
+                    'current_timestamp', current_timestamp)
+                logging.StreamHandler(sys.stdout)
+                logging.info(
+                    'Статус API:',
+                    response.get('homeworks'),
+                    'response',
+                    response,
+                    'current_timestamp', current_timestamp)
                 time.sleep(RETRY_TIME)
                 continue
             status = response.get('homeworks')[0].get('status')
@@ -149,16 +162,15 @@ def main():
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            if count_errors < 1:
-                count_errors += 1
-                logging.StreamHandler(sys.stdout)
-                logging.critical(message)
+            if errors:
+                errors = False
                 send_message(bot, message)
-                continue
             logging.StreamHandler(sys.stdout)
             logging.critical(message)
+            current_timestamp = int(time.time()) - (60 * 60 * 2)
             time.sleep(RETRY_TIME)
             continue
+        current_timestamp = int(time.time()) - (60 * 60 * 2)
 
 
 if __name__ == '__main__':

@@ -11,7 +11,8 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
-RETRY_TIME = 60 * 10
+RETRY_TIME = 1
+TIME_MINUS_MONTH = 2592000
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 
 HOMEWORK_STATUSES = {
@@ -59,28 +60,52 @@ class EmptyDictionaryOrListError(Exception):
 class UndocumentedStatusError(Exception):
     """Недокументированный статус."""
 
-    pass
+
+class RequestExceptionError(Exception):
+    """Ошибка запроса."""
+
+
+class TimeoutExceptionError(Exception):
+    """Ошибка таймаута."""
 
 
 def send_message(bot, message):
-    """Отправка сообщения в Телеграмм."""
+    """Отправка сообщения в Телеграм."""
     try:
-        bot.send_message(CHAT_ID, message)
-        logging.info(f'Отправка сообщения в Telegram выполнена: {message}')
+        # bot.send_message(CHAT_ID, message)
+        logging.StreamHandler(sys.stdout)
+        logging.info(
+            f'\nСообщение в Telegram отправлено:\n{message}')
     except Exception as err:
-        logging.error(f'Отправка сообщения в Telegram не выполнена: {err}')
+        logging.StreamHandler(sys.stdout)
+        logging.error(
+            f'\nСообщение в Telegram не отправлено:\n{err}')
 
 
 def get_api_answer(url, current_timestamp):
     """Получение данных с API YP."""
-    headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
-    payload = {'from_date': current_timestamp}
-    response = requests.get(url, headers=headers, params=payload)
+    try:
+        headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
+        payload = {'from_date': current_timestamp}
+        response = requests.get(url, headers=headers, params=payload)
+    except requests.exceptions.Timeout as timeout_error:
+        logging.StreamHandler(sys.stdout)
+        raise TimeoutExceptionError(
+            f'\nКод ответа API: Timeout - {timeout_error}')
+    except requests.exceptions.RequestException as request_error:
+        logging.StreamHandler(sys.stdout)
+        raise RequestExceptionError(
+            f'\nКод ответа API: RequestException - {request_error}')
+    except ValueError as value_error:
+        logging.StreamHandler(sys.stdout)
+        raise RequestExceptionError(
+            f'\nКод ответа API: ValueError - {value_error}')
+
     if response.status_code != 200:
-        logging.error(
-            f'Сбой в работе программы: Эндпоинт {ENDPOINT} недоступен. '
-            f'Код ответа API: {response.status_code}')
-        raise TheAnswerIsNot200Error(f'Код ответа API: {response.status_code}')
+        logging.StreamHandler(sys.stdout)
+        raise TheAnswerIsNot200Error(
+            f'\nЭндпоинт {ENDPOINT} недоступен.'
+            f'\nКод ответа API (status_code != 200): {response.status_code}')
     return response.json()
 
 
@@ -114,45 +139,31 @@ def check_tokens():
         logging.critical(
             'Отсутствует обязательная переменная окружения:'
             ' "PRACTICUM_TOKEN" Программа принудительно остановлена.')
-        exit()
+        return False
     if TELEGRAM_TOKEN is None:
         logging.critical(
             'Отсутствует обязательная переменная окружения:'
             ' "TELEGRAM_TOKEN" Программа принудительно остановлена.')
-        exit()
+        return False
     if CHAT_ID is None:
         logging.critical(
             'Отсутствует обязательная переменная окружения:'
             ' "CHAT_ID" Программа принудительно остановлена.')
-        exit()
+        return False
+    return True
 
 
 def main():
     """Главная функция запуска бота."""
-    check_tokens()
+    if not check_tokens():
+        exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time()) - (60 * 60 * 2)
+    current_timestamp = int(time.time()) - TIME_MINUS_MONTH
     errors = True
     status_tmp = 'reviewing'
     while True:
         try:
             response = get_api_answer(ENDPOINT, current_timestamp)
-            if response.get('homeworks') == []:
-                print(
-                    'Статус API:',
-                    response.get('homeworks'),
-                    'response',
-                    response,
-                    'current_timestamp', current_timestamp)
-                logging.StreamHandler(sys.stdout)
-                logging.info(
-                    'Статус API:',
-                    response.get('homeworks'),
-                    'response',
-                    response,
-                    'current_timestamp', current_timestamp)
-                time.sleep(RETRY_TIME)
-                continue
             status = response.get('homeworks')[0].get('status')
             if status != status_tmp:
                 status_tmp = status
@@ -166,10 +177,10 @@ def main():
                 send_message(bot, message)
             logging.StreamHandler(sys.stdout)
             logging.critical(message)
-            current_timestamp = int(time.time()) - (60 * 60 * 2)
+            current_timestamp = int(time.time()) - TIME_MINUS_MONTH
             time.sleep(RETRY_TIME)
             continue
-        current_timestamp = int(time.time()) - (60 * 60 * 2)
+        current_timestamp = int(time.time()) - TIME_MINUS_MONTH
 
 
 if __name__ == '__main__':

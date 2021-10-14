@@ -11,7 +11,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
-RETRY_TIME = 1
+RETRY_TIME = 60 * 10
 TIME_MINUS_MONTH = 2592000
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 

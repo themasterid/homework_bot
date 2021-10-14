@@ -90,7 +90,7 @@ def get_api_answer(url, current_timestamp):
         logging.StreamHandler(sys.stdout)
         logging.error(
             f'Код ответа API: ValueError - {value_error}')
-        raise RequestExceptionError(
+        raise ValueError(
             f'Код ответа API: ValueError - {value_error}')
     if response.status_code != 200:
         logging.StreamHandler(sys.stdout)

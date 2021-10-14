@@ -23,16 +23,19 @@ HOMEWORK_STATUSES = {
 
 class TheAnswerIsNot200Error(Exception):
     """Ответ сервера не равен 200."""
+
     pass
 
 
 class EmptyDictionaryOrListError(Exception):
     """Пустой словарь или список."""
+
     pass
 
 
 class UndocumentedStatusError(Exception):
     """Недокументированный статус."""
+
     pass
 
 

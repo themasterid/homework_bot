@@ -130,6 +130,7 @@ def check_tokens():
 
 
 def main():
+    """Главная функция запуска бота."""
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     count_errors = 0

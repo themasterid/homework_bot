@@ -86,18 +86,27 @@ def get_api_answer(url, current_timestamp):
         response = requests.get(url, headers=headers, params=payload)
     except requests.exceptions.Timeout as timeout_error:
         logging.StreamHandler(sys.stdout)
+        logging.error(
+            f'Код ответа API: Timeout - {timeout_error}')
         raise TimeoutExceptionError(
             f'Код ответа API: Timeout - {timeout_error}')
     except requests.exceptions.RequestException as request_error:
         logging.StreamHandler(sys.stdout)
+        logging.error(
+            f'Код ответа API: RequestException - {request_error}')
         raise RequestExceptionError(
             f'Код ответа API: RequestException - {request_error}')
     except ValueError as value_error:
         logging.StreamHandler(sys.stdout)
+        logging.error(
+            f'Код ответа API: ValueError - {value_error}')
         raise RequestExceptionError(
             f'Код ответа API: ValueError - {value_error}')
     if response.status_code != 200:
         logging.StreamHandler(sys.stdout)
+        logging.error(
+            f'Эндпоинт {ENDPOINT} недоступен.'
+            f'Код ответа API (status_code != 200): {response.status_code}')
         raise TheAnswerIsNot200Error(
             f'Эндпоинт {ENDPOINT} недоступен.'
             f'Код ответа API (status_code != 200): {response.status_code}')

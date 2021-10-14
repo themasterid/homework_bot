@@ -65,6 +65,7 @@ handler.setFormatter(formatter)
 
 
 def send_message(bot, message):
+    """Отправка сообщения в Телеграмм."""
     try:
         bot.send_message(CHAT_ID, message)
         logging.info(f'Отправка сообщения в Telegram выполнена: {message}')
@@ -73,6 +74,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(url, current_timestamp):
+    """Получение данных с API YP."""
     headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     response = requests.get(url, headers=headers, params=payload)
@@ -85,14 +87,14 @@ def get_api_answer(url, current_timestamp):
 
 
 def parse_status(homework):
-    """Статус изменился — анализируем его"""
+    """Статус изменился — анализируем его."""
     verdict = HOMEWORK_STATUSES.get(homework.get('status'))
     homework_name = homework.get('homework_name')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_response(response):
-    """Проверяем изменился ли статус"""
+    """Проверяем изменился ли статус."""
     homeworks = response.get('homeworks')[0]
     status = homeworks.get('status')
     if status == []:
@@ -109,6 +111,7 @@ def check_response(response):
 
 
 def check_tokens():
+    """Проверка наличия токенов."""
     if PRACTICUM_TOKEN is None:
         logging.critical(
             'Отсутствует обязательная переменная окружения:'

@@ -61,10 +61,6 @@ class RequestExceptionError(Exception):
     """Ошибка запроса."""
 
 
-class TimeoutExceptionError(Exception):
-    """Ошибка таймаута."""
-
-
 def send_message(bot, message):
     """Отправка сообщения в Телеграм."""
     try:

@@ -84,12 +84,6 @@ def get_api_answer(url, current_timestamp):
         headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
         payload = {'from_date': current_timestamp}
         response = requests.get(url, headers=headers, params=payload)
-    except requests.exceptions.Timeout as timeout_error:
-        logging.StreamHandler(sys.stdout)
-        logging.error(
-            f'Код ответа API: Timeout - {timeout_error}')
-        raise TimeoutExceptionError(
-            f'Код ответа API: Timeout - {timeout_error}')
     except requests.exceptions.RequestException as request_error:
         logging.StreamHandler(sys.stdout)
         logging.error(

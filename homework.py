@@ -110,7 +110,6 @@ def check_response(response):
 
 def check_tokens():
     """Проверка наличия токенов."""
-    cheker
     if PRACTICUM_TOKEN is None:
         logging.critical(
             'Отсутствует обязательная переменная окружения:'

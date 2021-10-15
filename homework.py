@@ -95,10 +95,10 @@ def get_api_answer(url, current_timestamp):
     if response.status_code != 200:
         logging.StreamHandler(sys.stdout)
         logging.error(
-            f'Эндпоинт {ENDPOINT} недоступен.'
+            f'Эндпоинт {ENDPOINT} недоступен. '
             f'Код ответа API (status_code != 200): {response.status_code}')
         raise TheAnswerIsNot200Error(
-            f'Эндпоинт {ENDPOINT} недоступен.'
+            f'Эндпоинт {ENDPOINT} недоступен. '
             f'Код ответа API (status_code != 200): {response.status_code}')
     return response.json()
 
@@ -177,16 +177,16 @@ def main():
             response = get_api_answer(
                 ENDPOINT, current_timestamp - RETRY_TIME)
             if response.get('homeworks') == []:
-                current_timestamp = int(time.time())
                 time.sleep(RETRY_TIME)
+                current_timestamp = int(time.time())
                 continue
             status = response.get('homeworks')[0].get('status')
             if status != status_tmp:
                 status_tmp = status
                 message = check_response(response)
                 send_message(bot, message)
-            current_timestamp = int(time.time())
             time.sleep(RETRY_TIME)
+            current_timestamp = int(time.time())
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if errors:
@@ -194,8 +194,8 @@ def main():
                 send_message(bot, message)
             logging.StreamHandler(sys.stdout)
             logging.critical(message)
-            current_timestamp = int(time.time())
             time.sleep(RETRY_TIME)
+            current_timestamp = int(time.time())
             continue
 
 

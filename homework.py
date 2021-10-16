@@ -192,7 +192,7 @@ def main():
             if errors:
                 errors = False
                 send_message(bot, message)
-                logger.critical(message)
+            logger.critical(message)
             time.sleep(RETRY_TIME)
             continue
 

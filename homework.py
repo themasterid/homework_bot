@@ -24,6 +24,8 @@ HOMEWORK_STATUSES = {
 CODE_API_MSG = 'Код ответа API: '
 EMPTY_VAL_MSG = 'Ошибка пустое значение: '
 NOT_DOC_ST_MSG = 'Ошибка недокументированный статус: '
+NO_TOKENS_MSG = 'Отсутствует обязательная переменная окружения: '
+STOP_PROG_MSG = 'Программа принудительно остановлена.'
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -146,18 +148,15 @@ def check_tokens():
     """Проверка наличия токенов."""
     if PRACTICUM_TOKEN is None:
         logger.critical(
-            'Отсутствует обязательная переменная окружения: '
-            'PRACTICUM_TOKEN. Программа принудительно остановлена.')
+            f'{NO_TOKENS_MSG}PRACTICUM_TOKEN. {STOP_PROG_MSG}')
         return
     if TELEGRAM_TOKEN is None:
         logger.critical(
-            'Отсутствует обязательная переменная окружения: '
-            'TELEGRAM_TOKEN. Программа принудительно остановлена.')
+            f'{NO_TOKENS_MSG}TELEGRAM_TOKEN. {STOP_PROG_MSG}')
         return
     if CHAT_ID is None:
         logger.critical(
-            'Отсутствует обязательная переменная окружения: '
-            'CHAT_ID. Программа принудительно остановлена.')
+            f'{NO_TOKENS_MSG}CHAT_ID. {STOP_PROG_MSG}')
         return
     return True
 

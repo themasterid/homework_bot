@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
 
 import requests
 import telegram
@@ -21,21 +20,16 @@ HOMEWORK_STATUSES = {
     'rejected': 'Работа проверена, в ней нашлись ошибки.'
 }
 
-CODE_API_MSG = 'Код ответа API: '
-EMPTY_VAL_MSG = 'Ошибка пустое значение: '
-NOT_DOC_ST_MSG = 'Ошибка недокументированный статус: '
-NO_TOKENS_MSG = 'Отсутствует обязательная переменная окружения: '
-STOP_PROG_MSG = 'Программа принудительно остановлена.'
-
 logging.basicConfig(
     level=logging.DEBUG,
     filename='program.log',
     filemode='w',
     format='%(asctime)s - %(levelname)s - %(message)s - %(name)s'
 )
-stdout_ = logging.StreamHandler()
 logger = logging.getLogger(__name__)
-logger.addHandler(stdout_)
+logger.addHandler(
+    logging.StreamHandler()
+)
 
 
 class TheAnswerIsNot200Error(Exception):
@@ -69,34 +63,26 @@ def get_api_answer(url, current_timestamp):
     """Получение данных с API YP."""
     headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
-    answer = {'homeworks': [], 'current_date': current_timestamp}
     try:
         response = requests.get(url, headers=headers, params=payload)
-    except requests.exceptions.RequestException as request_error:
-        logger.error(
-            f'{CODE_API_MSG}{request_error}')
-        raise RequestExceptionError(
-            f'{CODE_API_MSG}{request_error}')
-        return answer
-    except ValueError as value_error:
-        logger.error(
-            f'{CODE_API_MSG}{value_error}')
-        raise ValueError(
-            f'{CODE_API_MSG}{value_error}')
-        return answer
-    if response.status_code != 200:
-        logger.error(
-            f'Эндпоинт {url} недоступен. '
-            f'{CODE_API_MSG}{response.status_code}')
-        raise TheAnswerIsNot200Error(
-            f'Эндпоинт {url} недоступен. '
-            f'{CODE_API_MSG}{response.status_code}')
-        return answer
-    try:
+        if response.status_code != 200:
+            code_api_msg = (
+                f'Эндпоинт {url} недоступен.'
+                f' Код ответа API: {response.status_code}')
+            logger.error(code_api_msg)
+            raise TheAnswerIsNot200Error(code_api_msg)
+            return {}
         return response.json()
-    except json.JSONDecodeError as error:
-        logger.error(f'JSONDecodeError: {error}')
-        return answer
+    except requests.exceptions.RequestException as request_error:
+        code_api_msg = f'Код ответа API (RequestException): {request_error}'
+        logger.error(code_api_msg)
+        raise RequestExceptionError(code_api_msg)
+        return {}
+    except json.JSONDecodeError as value_error:
+        code_api_msg = f'Код ответа API (ValueError): {value_error}'
+        logger.error(code_api_msg)
+        raise json.JSONDecodeError(code_api_msg)
+        return {}
 
 
 def parse_status(homework):
@@ -104,61 +90,56 @@ def parse_status(homework):
     status = homework.get('status')
     homework_name = homework.get('homework_name')
     if status is None:
-        logger.error(
-            f'{EMPTY_VAL_MSG}{status}')
-        raise EmptyDictionaryOrListError(
-            f'{EMPTY_VAL_MSG}{status}')
+        code_api_msg = f'Ошибка пустое значение status: {status}'
+        logger.error(code_api_msg)
+        raise EmptyDictionaryOrListError(code_api_msg)
     if homework_name is None:
-        logger.error(
-            f'{EMPTY_VAL_MSG}{homework_name}')
-        raise EmptyDictionaryOrListError(
-            f'{EMPTY_VAL_MSG}{homework_name}')
-    if status not in HOMEWORK_STATUSES:
-        logger.error(
-            f'{NOT_DOC_ST_MSG}{status}')
-        raise UndocumentedStatusError(
-            f'{NOT_DOC_ST_MSG}{status}')
+        code_api_msg = f'Ошибка пустое значение homework_name: {homework_name}'
+        logger.error(code_api_msg)
+        raise EmptyDictionaryOrListError(code_api_msg)
     verdict = HOMEWORK_STATUSES[status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_response(response):
     """Проверяем данные в response."""
-    if response['homeworks'] == []:
-        logger.error(
-            f'{EMPTY_VAL_MSG}{response["homeworks"]}')
-        raise EmptyDictionaryOrListError(
-            f'{EMPTY_VAL_MSG}{response["homeworks"]}')
-    homeworks = response.get('homeworks')[0]
-    if homeworks is None:
-        logger.error(
-            f'{EMPTY_VAL_MSG}{homeworks}')
-        raise EmptyDictionaryOrListError(
-            f'{EMPTY_VAL_MSG}{homeworks}')
-    status = response.get('homeworks')[0].get('status')
-    if status not in HOMEWORK_STATUSES:
-        logger.error(
-            f'{NOT_DOC_ST_MSG}{status}')
-        raise UndocumentedStatusError(
-            f'{NOT_DOC_ST_MSG}{status}')
-    return homeworks
+    if response.get('homeworks') is None or response == {}:
+        code_api_msg = (
+            'Ошибка нет ключа homeworks в response или '
+            'response имеет неправильное значение.')
+        logger.error(code_api_msg)
+        raise EmptyDictionaryOrListError(code_api_msg)
+    elif response['homeworks'] == []:
+        return False
+    else:
+        status = response.get('homeworks')[0].get('status')
+        if status not in HOMEWORK_STATUSES:
+            code_api_msg = f'Ошибка недокументированный статус: {status}'
+            logger.error(code_api_msg)
+            raise UndocumentedStatusError(code_api_msg)
+            return False
+        return response.get('homeworks')[0]
 
 
 def check_tokens():
     """Проверка наличия токенов."""
+    no_tokens_msg = (
+        'Программа принудительно остановлена. '
+        'Отсутствует обязательная переменная окружения:')
+    tokens_bool = True
     if PRACTICUM_TOKEN is None:
+        tokens_bool = False
         logger.critical(
-            f'{NO_TOKENS_MSG}PRACTICUM_TOKEN. {STOP_PROG_MSG}')
-        return
+            f'{no_tokens_msg} PRACTICUM_TOKEN')
     if TELEGRAM_TOKEN is None:
+        tokens_bool = False
         logger.critical(
-            f'{NO_TOKENS_MSG}TELEGRAM_TOKEN. {STOP_PROG_MSG}')
-        return
+            f'{no_tokens_msg} TELEGRAM_TOKEN')
     if CHAT_ID is None:
+        tokens_bool = False
         logger.critical(
-            f'{NO_TOKENS_MSG}CHAT_ID. {STOP_PROG_MSG}')
-        return
-    return True
+            f'{no_tokens_msg} CHAT_ID')
+    return tokens_bool
 
 
 def main():
@@ -168,24 +149,20 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     errors = True
-    status_tmp = 'reviewing'
     while True:
         try:
             response = get_api_answer(ENDPOINT, current_timestamp)
-            if response['homeworks'] == []:
+            if not check_response(response):
                 logger.info(
-                    f"{datetime.now().strftime('%H:%M:%S')}:"
-                    "Изменений нет, ждем 10 минут и проверяем API")
+                    'Изменений нет, ждем 10 минут и проверяем API')
                 time.sleep(RETRY_TIME)
                 current_timestamp = int(time.time() - RETRY_TIME)
                 continue
-            status = check_response(response).get('status')
-            if status != status_tmp:
-                status_tmp = status
-                message = parse_status(response['homeworks'][0])
-                send_message(bot, message)
+            status = check_response(response)
+            message = parse_status(status)
+            send_message(bot, message)
             time.sleep(RETRY_TIME)
-            current_timestamp = response['current_date'] - RETRY_TIME
+            current_timestamp = int(time.time())
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if errors:

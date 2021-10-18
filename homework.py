@@ -71,18 +71,15 @@ def get_api_answer(url, current_timestamp):
                 f' Код ответа API: {response.status_code}')
             logger.error(code_api_msg)
             raise TheAnswerIsNot200Error(code_api_msg)
-            return {}
         return response.json()
     except requests.exceptions.RequestException as request_error:
         code_api_msg = f'Код ответа API (RequestException): {request_error}'
         logger.error(code_api_msg)
         raise RequestExceptionError(code_api_msg)
-        return {}
     except json.JSONDecodeError as value_error:
         code_api_msg = f'Код ответа API (ValueError): {value_error}'
         logger.error(code_api_msg)
         raise json.JSONDecodeError(code_api_msg)
-        return {}
 
 
 def parse_status(homework):
@@ -92,33 +89,32 @@ def parse_status(homework):
     if status is None:
         code_api_msg = f'Ошибка пустое значение status: {status}'
         logger.error(code_api_msg)
-        raise EmptyDictionaryOrListError(code_api_msg)
+        raise UndocumentedStatusError(code_api_msg)
     if homework_name is None:
         code_api_msg = f'Ошибка пустое значение homework_name: {homework_name}'
         logger.error(code_api_msg)
-        raise EmptyDictionaryOrListError(code_api_msg)
+        raise UndocumentedStatusError(code_api_msg)
     verdict = HOMEWORK_STATUSES[status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_response(response):
     """Проверяем данные в response."""
-    if response.get('homeworks') is None or response == {}:
+    if response.get('homeworks') is None or 'homeworks' not in response.keys():
         code_api_msg = (
-            'Ошибка нет ключа homeworks в response или '
-            'response имеет неправильное значение.')
+            'Ошибка ключа homeworks или response'
+            'имеет неправильное значение.')
         logger.error(code_api_msg)
         raise EmptyDictionaryOrListError(code_api_msg)
-    elif response['homeworks'] == []:
-        return False
+    if response['homeworks'] == []:
+        return {}, False
     else:
         status = response.get('homeworks')[0].get('status')
         if status not in HOMEWORK_STATUSES:
             code_api_msg = f'Ошибка недокументированный статус: {status}'
             logger.error(code_api_msg)
             raise UndocumentedStatusError(code_api_msg)
-            return False
-        return response.get('homeworks')[0]
+    return response.get('homeworks')[0], True
 
 
 def check_tokens():
@@ -152,17 +148,18 @@ def main():
     while True:
         try:
             response = get_api_answer(ENDPOINT, current_timestamp)
-            if not check_response(response):
-                logger.info(
-                    'Изменений нет, ждем 10 минут и проверяем API')
-                time.sleep(RETRY_TIME)
-                current_timestamp = int(time.time() - RETRY_TIME)
-                continue
-            status = check_response(response)
-            message = parse_status(status)
-            send_message(bot, message)
+            homework, status_bool = check_response(response)
+            if status_bool:
+                message = parse_status(homework)
+                send_message(bot, message)
             time.sleep(RETRY_TIME)
-            current_timestamp = int(time.time())
+            logger.info(
+                'Изменений нет, ждем 10 минут и проверяем API')
+            current_timestamp = response.get('current_date')
+            if current_timestamp is None:
+                logger.info(
+                    'Ошибка current_date, берем текущее время!')
+                current_timestamp = int(time.time())
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if errors:
@@ -174,4 +171,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    msg = 'Красиво ушел, Ctrl+C, боту сообщил!'
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    send_message(bot, 'Скрипт начал свою работу!')
+    try:
+        main()
+    except KeyboardInterrupt as key_error:
+        logger.error(f'{msg}{key_error}')
+        send_message(bot, 'Скрипт завершил свою работу!')

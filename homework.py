@@ -71,6 +71,11 @@ def get_api_answer(url, current_timestamp):
                 f' Код ответа API: {response.status_code}')
             logger.error(code_api_msg)
             raise TheAnswerIsNot200Error(code_api_msg)
+        current_timestamp = response.json().get('current_date')
+        if current_timestamp is None:
+            logger.info(
+                'Ошибка current_date, берем текущее время!')
+            current_timestamp = int(time.time())
         return response.json()
     except requests.exceptions.RequestException as request_error:
         code_api_msg = f'Код ответа API (RequestException): {request_error}'
@@ -100,21 +105,20 @@ def parse_status(homework):
 
 def check_response(response):
     """Проверяем данные в response."""
-    if response.get('homeworks') is None or 'homeworks' not in response.keys():
+    if response.get('homeworks') is None:
         code_api_msg = (
             'Ошибка ключа homeworks или response'
             'имеет неправильное значение.')
         logger.error(code_api_msg)
         raise EmptyDictionaryOrListError(code_api_msg)
     if response['homeworks'] == []:
-        return {}, False
-    else:
-        status = response.get('homeworks')[0].get('status')
-        if status not in HOMEWORK_STATUSES:
-            code_api_msg = f'Ошибка недокументированный статус: {status}'
-            logger.error(code_api_msg)
-            raise UndocumentedStatusError(code_api_msg)
-    return response.get('homeworks')[0], True
+        return {}
+    status = response['homeworks'][0].get('status')
+    if status not in HOMEWORK_STATUSES:
+        code_api_msg = f'Ошибка недокументированный статус: {status}'
+        logger.error(code_api_msg)
+        raise UndocumentedStatusError(code_api_msg)
+    return response['homeworks'][0]
 
 
 def check_tokens():
@@ -148,18 +152,13 @@ def main():
     while True:
         try:
             response = get_api_answer(ENDPOINT, current_timestamp)
-            homework, status_bool = check_response(response)
-            if status_bool:
+            homework = check_response(response)
+            if homework != {}:
                 message = parse_status(homework)
                 send_message(bot, message)
-            time.sleep(RETRY_TIME)
             logger.info(
                 'Изменений нет, ждем 10 минут и проверяем API')
-            current_timestamp = response.get('current_date')
-            if current_timestamp is None:
-                logger.info(
-                    'Ошибка current_date, берем текущее время!')
-                current_timestamp = int(time.time())
+            time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if errors:
@@ -167,10 +166,11 @@ def main():
                 send_message(bot, message)
             logger.critical(message)
             time.sleep(RETRY_TIME)
-            continue
 
 
 if __name__ == '__main__':
+    if not check_tokens():
+        exit()
     msg = 'Красиво ушел, Ctrl+C, боту сообщил!'
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     send_message(bot, 'Скрипт начал свою работу!')

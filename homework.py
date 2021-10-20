@@ -75,7 +75,7 @@ def get_api_answer(url, current_timestamp):
         if current_timestamp is None:
             logger.info(
                 'Ошибка current_date, берем текущее время!')
-            current_timestamp = int(time.time())
+            response.json()['current_date'] = int(time.time())
         return response.json()
     except requests.exceptions.RequestException as request_error:
         code_api_msg = f'Код ответа API (RequestException): {request_error}'

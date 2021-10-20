@@ -5,7 +5,6 @@ import time
 
 import requests
 import telegram
-from telegram import TelegramError
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -54,13 +53,17 @@ def send_message(bot, message):
         bot.send_message(CHAT_ID, message)
         logger.info(
             f'Сообщение в Telegram отправлено: {message}')
-    except TelegramError as telegram_error:
+    except telegram.TelegramError as telegram_error:
         logger.error(
             f'Сообщение в Telegram не отправлено: {telegram_error}')
 
 
 def get_api_answer(url, current_timestamp):
     """Получение данных с API YP."""
+    if current_timestamp is None:
+        logger.info(
+            'Ошибка current_date, берем текущее время!')
+        current_timestamp = int(time.time())
     headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     try:
@@ -72,10 +75,6 @@ def get_api_answer(url, current_timestamp):
             logger.error(code_api_msg)
             raise TheAnswerIsNot200Error(code_api_msg)
         current_timestamp = response.json().get('current_date')
-        if current_timestamp is None:
-            logger.info(
-                'Ошибка current_date, берем текущее время!')
-            response.json()['current_date'] = int(time.time())
         return response.json()
     except requests.exceptions.RequestException as request_error:
         code_api_msg = f'Код ответа API (RequestException): {request_error}'
@@ -153,12 +152,11 @@ def main():
         try:
             response = get_api_answer(ENDPOINT, current_timestamp)
             homework = check_response(response)
-            if homework != {}:
+            if homework:
                 message = parse_status(homework)
                 send_message(bot, message)
             logger.info(
                 'Изменений нет, ждем 10 минут и проверяем API')
-            current_timestamp = response.get('current_date')
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
@@ -170,13 +168,4 @@ def main():
 
 
 if __name__ == '__main__':
-    if not check_tokens():
-        exit()
-    msg = 'Красиво ушел, Ctrl+C, боту сообщил!'
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    send_message(bot, 'Скрипт начал свою работу!')
-    try:
-        main()
-    except KeyboardInterrupt as key_error:
-        logger.error(f'{msg}{key_error}')
-        send_message(bot, 'Скрипт завершил свою работу!')
+    main()

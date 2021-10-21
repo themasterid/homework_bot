@@ -60,8 +60,7 @@ def send_message(bot, message):
 
 def get_api_answer(url, current_timestamp):
     """Получение данных с API YP."""
-    current_timestamp = (
-        current_timestamp, int(time.time()))[current_timestamp is None]
+    current_timestamp = current_timestamp or int(time.time())
     headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     try:

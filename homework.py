@@ -60,10 +60,8 @@ def send_message(bot, message):
 
 def get_api_answer(url, current_timestamp):
     """Получение данных с API YP."""
-    if current_timestamp is None:
-        logger.info(
-            'Ошибка current_date, берем текущее время!')
-        current_timestamp = int(time.time())
+    current_timestamp = (
+        current_timestamp, int(time.time()))[current_timestamp is None]
     headers = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
     try:
@@ -74,7 +72,6 @@ def get_api_answer(url, current_timestamp):
                 f' Код ответа API: {response.status_code}')
             logger.error(code_api_msg)
             raise TheAnswerIsNot200Error(code_api_msg)
-        current_timestamp = response.json().get('current_date')
         return response.json()
     except requests.exceptions.RequestException as request_error:
         code_api_msg = f'Код ответа API (RequestException): {request_error}'

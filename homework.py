@@ -87,15 +87,19 @@ def parse_status(homework):
     status = homework.get('status')
     homework_name = homework.get('homework_name')
     if status is None:
-        code_api_msg = f'Ошибка пустое значение status: {status}'
-        logger.error(code_api_msg)
-        raise UndocumentedStatusError(code_api_msg)
+        extracted_from_parse_status(
+            'Ошибка пустое значение status: ', status)
     if homework_name is None:
-        code_api_msg = f'Ошибка пустое значение homework_name: {homework_name}'
-        logger.error(code_api_msg)
-        raise UndocumentedStatusError(code_api_msg)
+        extracted_from_parse_status(
+            'Ошибка пустое значение homework_name: ', homework_name)
     verdict = HOMEWORK_STATUSES[status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+
+
+def extracted_from_parse_status(arg0, arg1):
+    code_api_msg = f'{arg0}{arg1}'
+    logger.error(code_api_msg)
+    raise UndocumentedStatusError(code_api_msg)
 
 
 def check_response(response):
@@ -143,14 +147,16 @@ def main():
         exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
+    tmp_status = 'reviewing'
     errors = True
     while True:
         try:
             response = get_api_answer(ENDPOINT, current_timestamp)
             homework = check_response(response)
-            if homework:
+            if homework and tmp_status != homework['status']:
                 message = parse_status(homework)
                 send_message(bot, message)
+                tmp_status = homework['status']
             logger.info(
                 'Изменений нет, ждем 10 минут и проверяем API')
             time.sleep(RETRY_TIME)

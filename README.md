@@ -14,9 +14,9 @@ https://practicum.yandex.ru/api/user_api/homework_statuses/
 
 и доступ к нему возможен только по токену.
 
-Получить токен можно по адресу: 
+Получить токен можно по [адресу](https://oauth.yandex.ru/authorize?response_type=token&client_id=1d0b9dd4d652455a9eb710d450ff456a)
 
-https://oauth.yandex.ru/authorize?response_type=token&client_id=1d0b9dd4d652455a9eb710d450ff456a
+Копируем его, он нам пригодится чуть позже.
 
 ### Принцип работы API
 Когда ревьюер проверяет вашу домашнюю работу, он присваивает ей один из статусов:

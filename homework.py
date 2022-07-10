@@ -75,11 +75,11 @@ def get_api_answer(url, current_timestamp):
     except requests.exceptions.RequestException as request_error:
         code_api_msg = f'Код ответа API (RequestException): {request_error}'
         logger.error(code_api_msg)
-        raise RequestExceptionError(code_api_msg)
+        raise RequestExceptionError(code_api_msg) from request_error
     except json.JSONDecodeError as value_error:
         code_api_msg = f'Код ответа API (ValueError): {value_error}'
         logger.error(code_api_msg)
-        raise json.JSONDecodeError(code_api_msg)
+        raise json.JSONDecodeError(code_api_msg) from value_error
 
 
 def parse_status(homework):

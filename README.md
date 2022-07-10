@@ -26,7 +26,7 @@ https://practicum.yandex.ru/api/user_api/homework_statuses/
 
 ### Запуск на ПК
 
-Плонируем проект:
+Клонируем проект:
 
 ```bash
 git clone https://github.com/themasterid/homework_bot.git

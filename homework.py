@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -146,6 +147,10 @@ def main():
     if not check_tokens():
         exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    now = datetime.datetime.now()
+    send_message(
+        bot,
+        f'Я начал свою работу: {now.strftime("%d-%m-%Y %H:%M")}')
     current_timestamp = int(time.time())
     tmp_status = 'reviewing'
     errors = True

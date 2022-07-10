@@ -28,7 +28,49 @@ https://oauth.yandex.ru/authorize?response_type=token&client_id=1d0b9dd4d652455a
 работа принята
 ```
 
-### Импорт ключей для API yandex.practicum и телеграм тоукена с чат id
+### Запуск на ПК
+
+Плонируем проект:
+
+```bash
+git clone https://github.com/themasterid/homework_bot.git
+```
+
+или
+
+```bash
+git clone git@github.com:themasterid/homework_bot.git
+```
+
+Переходим в папку с ботом.
+
+```bash
+cd homework_bot
+```
+
+Устанавливаем виртуальное окружение
+
+```bash
+python -m venv venv
+```
+
+Активируем виртуальное окружение
+
+```bash
+source venv/Scripts/activate
+```
+
+Для деактивации виртуального окружения выполянем (после работы)
+
+```bash
+deactivate
+```
+
+Устанавливаем зависимости
+
+```bash
+pip install -r requirements.txt
+```
 
 В консоле импортируем ключи:
 
@@ -37,3 +79,13 @@ export PRACTICUM_TOKEN=<PRACTICUM_TOKEN>
 export TELEGRAM_TOKEN=<TELEGRAM_TOKEN>
 export CHAT_ID=<CHAT_ID>
 ```
+
+Запускаем бота
+
+```bash
+python homework.py
+```
+
+Бот будет работать, и каждые 10 минут проверять статус вашей домашней работы.
+
+Автор: Дмитрий Клепиков

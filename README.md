@@ -63,7 +63,6 @@ source venv/Scripts/activate
 ```
 
 > Для деактивации виртуального окружения выполянем (после работы)
-
 > ```bash
 > deactivate
 > ```

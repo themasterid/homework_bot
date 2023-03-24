@@ -46,11 +46,7 @@ class MockResponseGET:
         self.status_code = http_status
 
     def json(self):
-        data = {
-            "homeworks": [],
-            "current_date": self.random_sid
-        }
-        return data
+        return {"homeworks": [], "current_date": self.random_sid}
 
 
 class MockTelegramBot:
